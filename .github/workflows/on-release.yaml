@@ -2,15 +2,8 @@
 name: On Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: Chart version (semver, e.g. 0.1.0)
-        required: true
-      push:
-        description: Push chart to GHCR OCI registry
-        type: boolean
-        default: true
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -25,33 +18,38 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - uses: azure/setup-helm@v4
         with:
           version: v3.16.4
 
+      - name: Resolve chart version from release tag
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "CHART_VERSION=$VERSION" >> "$GITHUB_ENV"
+
       - name: Set chart version
         run: |
-          sed -i "s/^version:.*/version: ${{ inputs.version }}/" charts/buildkit/Chart.yaml
-          sed -i "s/^appVersion:.*/appVersion: \"${{ inputs.version }}\"/" charts/buildkit/Chart.yaml
+          sed -i "s/^version:.*/version: ${CHART_VERSION}/" charts/buildkit/Chart.yaml
 
       - name: Package chart
         run: helm package charts/buildkit --destination dist
 
       - name: Login to GHCR
-        if: inputs.push
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
             --username "${{ github.actor }}" \
             --password-stdin
 
       - name: Push OCI chart
-        if: inputs.push
         run: |
-          helm push "dist/buildkit-${{ inputs.version }}.tgz" oci://ghcr.io/builderhub
+          helm push "dist/buildkit-${{ env.CHART_VERSION }}.tgz" oci://ghcr.io/builderhub
 
       - name: Upload chart artifact
         uses: actions/upload-artifact@v4
         with:
-          name: helm-chart-buildkit-${{ inputs.version }}
-          path: dist/buildkit-${{ inputs.version }}.tgz
+          name: helm-chart-buildkit-${{ env.CHART_VERSION }}
+          path: dist/buildkit-${{ env.CHART_VERSION }}.tgz
