@@ -46,10 +46,10 @@ jobs:
 
       - name: Push OCI chart
         run: |
-          helm push "dist/buildkit-${{ env.CHART_VERSION }}.tgz" oci://ghcr.io/builderhub
+          helm push "dist/buildkit-helm-${{ env.CHART_VERSION }}.tgz" oci://ghcr.io/builderhub
 
       - name: Upload chart artifact
         uses: actions/upload-artifact@v4
         with:
-          name: helm-chart-buildkit-${{ env.CHART_VERSION }}
-          path: dist/buildkit-${{ env.CHART_VERSION }}.tgz
+          name: helm-chart-buildkit-helm-${{ env.CHART_VERSION }}
+          path: dist/buildkit-helm-${{ env.CHART_VERSION }}.tgz

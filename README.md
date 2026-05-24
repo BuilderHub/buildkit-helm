@@ -26,7 +26,7 @@ helm install buildkit ./charts/buildkit \
 Publish a [GitHub Release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) with a semver tag (`v0.1.0` or `0.1.0`). The release tag becomes the chart version pushed to GHCR.
 
 ```bash
-helm install buildkit oci://ghcr.io/builderhub/buildkit --version 0.1.0
+helm install buildkit oci://ghcr.io/builderhub/buildkit-helm --version 0.1.0
 ```
 
 ## Quick examples
@@ -104,7 +104,7 @@ When `metrics.enabled` is true, the chart adds a [buildkit-metrics-agent](https:
 ## CI
 
 - **on-pr.yaml**: `helm lint`, chart-testing lint, kind install, port-forward, buildx remote build
-- **on-release.yaml**: on `release` published, packages the chart using the release tag as version and pushes `oci://ghcr.io/builderhub/buildkit`
+- **on-release.yaml**: on `release` published, packages the chart using the release tag as version and pushes `oci://ghcr.io/builderhub/buildkit-helm`
 
 Local checks:
 

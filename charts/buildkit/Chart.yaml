@@ -1,5 +1,5 @@
 apiVersion: v2
-name: buildkit
+name: buildkit-helm
 description: Helm chart for moby/buildkit and BuilderHub/buildkit-hive daemons on Kubernetes
 type: application
 version: 0.1.0
