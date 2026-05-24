@@ -57,6 +57,15 @@ jobs:
         with:
           cluster_name: chart-testing
 
+      - name: Pre-pull chart images into kind
+        run: |
+          for image in \
+            moby/buildkit:v0.20.0-rootless \
+            ghcr.io/builderhub/buildkit-metrics-agent:latest; do
+            docker pull "$image"
+            kind load docker-image --name chart-testing "$image"
+          done
+
       - name: Install chart
         run: |
           helm install buildkit charts/buildkit \
@@ -64,7 +73,8 @@ jobs:
             --create-namespace \
             -f ci/values-e2e-buildkit.yaml \
             --wait \
-            --timeout 5m
+            --timeout 10m
+          kubectl get pods,svc -n buildkit-e2e -o wide
 
       - name: Wait for pod
         run: |

@@ -9,10 +9,13 @@ metadata:
   name: {{ include "buildkit.daemonFullname" (list $ .) }}
   labels:
     {{- include "buildkit.labels" (list $ .) | nindent 4 }}
-  {{- with .podAnnotations }}
   annotations:
+    {{- if .rootless }}
+    container.apparmor.security.beta.kubernetes.io/buildkitd: unconfined
+    {{- end }}
+    {{- with .podAnnotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   {{- include "buildkit.podTemplate" (list $ . "pod") | nindent 2 }}
   restartPolicy: Always
@@ -32,10 +35,13 @@ spec:
     metadata:
       labels:
         {{- include "buildkit.labels" (list $ .) | nindent 8 }}
-      {{- with .podAnnotations }}
       annotations:
+        {{- if .rootless }}
+        container.apparmor.security.beta.kubernetes.io/buildkitd: unconfined
+        {{- end }}
+        {{- with .podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
     spec:
       {{- include "buildkit.podTemplate" (list $ . "daemon") | nindent 6 }}
 {{- else if eq $mode "statefulset" }}
@@ -61,10 +67,13 @@ spec:
     metadata:
       labels:
         {{- include "buildkit.labels" (list $ .) | nindent 8 }}
-      {{- with .podAnnotations }}
       annotations:
+        {{- if .rootless }}
+        container.apparmor.security.beta.kubernetes.io/buildkitd: unconfined
+        {{- end }}
+        {{- with .podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
     spec:
       {{- include "buildkit.podTemplate" (list $ . "statefulset") | nindent 6 }}
 {{- else }}

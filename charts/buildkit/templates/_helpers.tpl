@@ -120,10 +120,16 @@ Image defaults for a daemon variant.
 {{- if not $tag }}
 {{- if eq $variant "hive" }}
 {{- $img.tag }}
-{{- else if $daemon.rootless }}
-{{- printf "%s-rootless" (default $root.Chart.AppVersion $img.tag) }}
 {{- else }}
-{{- default $root.Chart.AppVersion $img.tag }}
+{{- $base := default $root.Chart.AppVersion $img.tag }}
+{{- if and $base (not (hasPrefix "v" $base)) }}
+{{- $base = printf "v%s" $base }}
+{{- end }}
+{{- if $daemon.rootless }}
+{{- printf "%s-rootless" $base }}
+{{- else }}
+{{- $base }}
+{{- end }}
 {{- end }}
 {{- else }}
 {{- $tag }}
@@ -315,8 +321,6 @@ buildkitd container spec.
     runAsUser: 1000
     runAsGroup: 1000
     seccompProfile:
-      type: Unconfined
-    appArmorProfile:
       type: Unconfined
     {{- else }}
     privileged: true
