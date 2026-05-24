@@ -98,12 +98,14 @@ jobs:
 
       - name: Remote build via buildx
         run: |
-          cat >/tmp/Dockerfile.e2e <<'EOF'
+          mkdir -p /tmp/buildkit-e2e
+          cat >/tmp/buildkit-e2e/Dockerfile <<'EOF'
           FROM alpine:3.20
           RUN echo "buildkit-helm-e2e" >/e2e.txt
           EOF
+          docker buildx rm helm-e2e 2>/dev/null || true
           docker buildx create --name helm-e2e --driver remote tcp://127.0.0.1:1234 --use
-          docker buildx build --builder helm-e2e --progress plain -f /tmp/Dockerfile.e2e /tmp --output type=cacheonly .
+          docker buildx build --builder helm-e2e --progress plain --output type=cacheonly /tmp/buildkit-e2e
 
       - name: Metrics endpoint reachable
         run: |
