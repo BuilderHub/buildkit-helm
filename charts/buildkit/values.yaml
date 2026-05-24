@@ -116,6 +116,8 @@ daemons:
       exec:
         command:
           - buildctl
+          - --addr
+          - unix:///run/buildkit/buildkitd.sock
           - debug
           - workers
       initialDelaySeconds: 5
@@ -126,10 +128,12 @@ daemons:
       exec:
         command:
           - buildctl
+          - --addr
+          - unix:///run/buildkit/buildkitd.sock
           - debug
           - workers
       initialDelaySeconds: 5
-      periodSeconds: 30
+      periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 3
       successThreshold: 1

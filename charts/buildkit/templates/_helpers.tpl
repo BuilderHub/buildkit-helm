@@ -285,8 +285,9 @@ buildkitd container spec.
     {{- toYaml . | nindent 4 }}
     {{- end }}
   {{- $s3env := and (eq ($daemon.variant | default "buildkit") "hive") $s3.enabled $s3.existingSecret (default true $s3.mountAsEnv) }}
-  {{- if or $daemon.env $s3env }}
   env:
+    - name: BUILDKIT_HOST
+      value: unix:///run/buildkit/buildkitd.sock
     {{- if $s3env }}
     {{- range $envName, $secretKey := ($s3.secretKeys | default dict) }}
     {{- if $secretKey }}
@@ -301,21 +302,30 @@ buildkitd container spec.
     {{- with $daemon.env }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
-  {{- end }}
   ports:
     {{- if $svc.enabled }}
     - name: buildkit
       containerPort: {{ default 1234 $svc.port }}
       protocol: TCP
     {{- end }}
-  {{- with $daemon.livenessProbe }}
+  {{- $probeCommand := list "buildctl" "--addr" "unix:///run/buildkit/buildkitd.sock" "debug" "workers" }}
+  {{- $livenessProbe := $daemon.livenessProbe | default (dict
+      "exec" (dict "command" $probeCommand)
+      "initialDelaySeconds" 5
+      "periodSeconds" 30
+      "timeoutSeconds" 5
+      "failureThreshold" 3) }}
   livenessProbe:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-  {{- with $daemon.readinessProbe }}
+    {{- toYaml $livenessProbe | nindent 4 }}
+  {{- $readinessProbe := $daemon.readinessProbe | default (dict
+      "exec" (dict "command" $probeCommand)
+      "initialDelaySeconds" 5
+      "periodSeconds" 10
+      "timeoutSeconds" 5
+      "failureThreshold" 3
+      "successThreshold" 1) }}
   readinessProbe:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- toYaml $readinessProbe | nindent 4 }}
   securityContext:
     {{- if $daemon.rootless }}
     runAsUser: 1000
