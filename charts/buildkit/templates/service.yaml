@@ -1,0 +1,31 @@
+{{- range .Values.daemons }}
+{{- $svc := .service | default dict }}
+{{- if and .enabled $svc.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "buildkit.daemonFullname" (list $ .) }}
+  labels:
+    {{- include "buildkit.labels" (list $ .) | nindent 4 }}
+  {{- with $svc.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ default "ClusterIP" $svc.type }}
+  selector:
+    {{- include "buildkit.selectorLabels" (list $ .) | nindent 4 }}
+  ports:
+    - name: buildkit
+      port: {{ default 1234 $svc.port }}
+      targetPort: buildkit
+      protocol: TCP
+    {{- if include "buildkit.metricsEnabled" (list $ .) }}
+    - name: metrics
+      port: {{ $.Values.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
+    {{- end }}
+{{- end }}
+{{- end }}

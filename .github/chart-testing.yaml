@@ -1,0 +1,8 @@
+remote: origin
+target-branch: main
+chart-dirs:
+  - charts
+chart-repos: []
+chart-yaml-schema: .github/chart_schema.yaml
+lint-conf: .github/lintconf.yaml
+validate-maintainers: false

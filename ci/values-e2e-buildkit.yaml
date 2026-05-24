@@ -1,0 +1,15 @@
+metrics:
+  enabled: true
+
+daemons:
+  - name: e2e
+    enabled: true
+    variant: buildkit
+    mode: pod
+    rootless: true
+    storage:
+      type: emptyDir
+    service:
+      enabled: true
+      port: 1234
+    metrics: {}

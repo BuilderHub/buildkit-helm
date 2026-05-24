@@ -1,0 +1,138 @@
+---
+name: On PR
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  chart-lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+
+      - name: Install chart-testing
+        run: |
+          curl -fsSL https://github.com/helm/chart-testing/releases/download/v3.12.0/chart-testing_3.12.0_linux_amd64.tar.gz \
+            | tar xz -C /tmp
+          sudo mv /tmp/ct /usr/local/bin/ct
+          pip install yamale yamllint
+
+      - name: Lint chart
+        run: |
+          helm lint charts/buildkit
+          ct lint --config .github/chart-testing.yaml --charts charts/buildkit
+
+      - name: Template smoke
+        run: |
+          helm template ct charts/buildkit -f ci/values-lint.yaml >/dev/null
+          helm template ct charts/buildkit -f ci/values-e2e-buildkit.yaml >/dev/null
+
+  chart-e2e:
+    needs: chart-lint
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: chart-testing
+
+      - name: Pre-pull chart images into kind
+        run: |
+          for image in \
+            moby/buildkit:v0.30.0-rootless \
+            ghcr.io/builderhub/buildkit-metrics-agent:latest; do
+            docker pull "$image"
+            kind load docker-image --name chart-testing "$image"
+          done
+
+      - name: Install chart
+        run: |
+          helm install buildkit charts/buildkit \
+            --namespace buildkit-e2e \
+            --create-namespace \
+            -f ci/values-e2e-buildkit.yaml \
+            --wait \
+            --timeout 10m
+          kubectl get pods,svc -n buildkit-e2e -o wide
+
+      - name: Wait for pod
+        run: |
+          kubectl wait --for=condition=ready pod \
+            -l buildkit.builderhub.dev/daemon=e2e \
+            -n buildkit-e2e \
+            --timeout=180s
+
+      - name: Port-forward BuildKit
+        run: |
+          kubectl port-forward -n buildkit-e2e svc/buildkit-e2e 1234:1234 >/tmp/pf-buildkit.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if nc -z 127.0.0.1 1234 2>/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "BuildKit port-forward did not become ready"
+          cat /tmp/pf-buildkit.log || true
+          exit 1
+
+      - name: Remote build via buildx
+        run: |
+          mkdir -p /tmp/buildkit-e2e
+          cat >/tmp/buildkit-e2e/Dockerfile <<'EOF'
+          FROM alpine:3.20
+          RUN echo "buildkit-helm-e2e" >/e2e.txt
+          EOF
+          docker buildx rm helm-e2e 2>/dev/null || true
+          docker buildx create --name helm-e2e --driver remote tcp://127.0.0.1:1234 --use
+          docker buildx build --builder helm-e2e --progress plain --output type=cacheonly /tmp/buildkit-e2e
+
+      - name: Metrics endpoint reachable
+        run: |
+          kubectl port-forward -n buildkit-e2e svc/buildkit-e2e 9090:9090 >/tmp/pf-metrics.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:9090/metrics | grep -q buildkit_builds_total; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Metrics scrape failed"
+          exit 1
+
+  all-green:
+    if: always()
+    needs:
+      - chart-lint
+      - chart-e2e
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Verify required jobs
+        run: |
+          if [[ "${{ needs.chart-lint.result }}" != "success" ]]; then
+            echo "::error::chart-lint failed"
+            exit 1
+          fi
+          if [[ "${{ needs.chart-e2e.result }}" != "success" ]]; then
+            echo "::error::chart-e2e failed"
+            exit 1
+          fi

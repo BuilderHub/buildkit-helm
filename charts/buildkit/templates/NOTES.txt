@@ -1,0 +1,29 @@
+BuildKit Helm release {{ .Release.Name }} deployed.
+
+{{- range .Values.daemons }}
+{{- if .enabled }}
+{{- $svc := .service | default dict }}
+{{- if $svc.enabled }}
+
+Daemon "{{ .name }}" ({{ .variant | default "buildkit" }}, {{ .mode }}):
+  Service: {{ include "buildkit.daemonFullname" (list $ .) }}:{{ default 1234 $svc.port }}
+{{- if include "buildkit.metricsEnabled" (list $ .) }}
+  Metrics: http://{{ include "buildkit.daemonFullname" (list $ .) }}:{{ $.Values.metrics.port }}/metrics
+{{- end }}
+{{- $tls := .tls | default dict }}
+{{- $client := $tls.client | default dict }}
+{{- if $client.enabled }}
+  Client mTLS secret: {{ include "buildkit.tlsClientSecretName" (list $ .) }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+Example (first enabled daemon):
+{{- range .Values.daemons }}
+{{- if and .enabled (.service | default dict).enabled }}
+  kubectl port-forward svc/{{ include "buildkit.daemonFullname" (list $ .) }} 1234:{{ (.service | default dict).port | default 1234 }}
+  docker buildx create --name remote --driver remote tcp://127.0.0.1:1234 --use
+{{- break }}
+{{- end }}
+{{- end }}

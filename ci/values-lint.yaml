@@ -1,0 +1,50 @@
+metrics:
+  enabled: true
+
+daemons:
+  - name: buildkit-pod
+    enabled: true
+    variant: buildkit
+    mode: pod
+    arch: amd64
+    rootless: true
+    storage:
+      type: emptyDir
+    service:
+      enabled: true
+
+  - name: hive-sts
+    enabled: true
+    variant: hive
+    mode: statefulset
+    arch: arm64
+    replicas: 2
+    rootless: true
+    storage:
+      type: pvc
+      pvc:
+        size: 10Gi
+    config:
+      inline: |
+        [cache]
+          backend = "postgres"
+          [cache.s3]
+            bucket = "test-bucket"
+            region = "us-east-1"
+    secrets:
+      s3:
+        enabled: true
+        existingSecret: buildkit-s3
+        secretKeys:
+          AWS_ACCESS_KEY_ID: AWS_ACCESS_KEY_ID
+          AWS_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_KEY
+      postgres:
+        enabled: true
+        existingSecret: buildkit-postgres
+    tls:
+      server:
+        enabled: false
+      client:
+        enabled: false
+    service:
+      enabled: true
