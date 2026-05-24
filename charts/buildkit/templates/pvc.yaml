@@ -1,0 +1,22 @@
+{{- range .Values.daemons }}
+{{- $stor := .storage | default dict }}
+{{- $pvc := $stor.pvc | default dict }}
+{{- if and .enabled (eq ($stor.type | default "emptyDir") "pvc") (not $pvc.existingClaim) (ne .mode "statefulset") }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "buildkit.daemonFullname" (list $ .) }}-storage
+  labels:
+    {{- include "buildkit.labels" (list $ .) | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml (default (list "ReadWriteOnce") $pvc.accessModes) | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ default "50Gi" $pvc.size }}
+  {{- if $pvc.storageClassName }}
+  storageClassName: {{ $pvc.storageClassName }}
+  {{- end }}
+{{- end }}
+{{- end }}

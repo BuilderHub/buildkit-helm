@@ -1,0 +1,15 @@
+{{- range .Values.daemons }}
+{{- $cfg := .config | default dict }}
+{{- if and .enabled $cfg.inline (not $cfg.existingConfigMap) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "buildkit.configMapName" (list $ .) }}
+  labels:
+    {{- include "buildkit.labels" (list $ .) | nindent 4 }}
+data:
+  {{ default "buildkitd.toml" $cfg.configMapKey }}: |
+    {{- $cfg.inline | nindent 4 }}
+{{- end }}
+{{- end }}

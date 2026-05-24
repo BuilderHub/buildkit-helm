@@ -1,0 +1,135 @@
+# Default image settings per variant (overridable per daemon).
+image:
+  buildkit:
+    repository: moby/buildkit
+    tag: ""
+    pullPolicy: IfNotPresent
+  hive:
+    repository: ghcr.io/builderhub/buildkit-hive
+    tag: master-rootless
+    pullPolicy: IfNotPresent
+
+metrics:
+  enabled: true
+  image:
+    repository: ghcr.io/builderhub/buildkit-metrics-agent
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 9090
+  scrapeIntervalSecs: 15
+  resources: {}
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podSecurityContext: {}
+
+commonLabels: {}
+commonAnnotations: {}
+
+# One or more BuildKit daemon instances.
+daemons:
+  - name: buildkit
+    enabled: true
+    variant: buildkit
+    mode: pod
+    arch: ""
+    replicas: 1
+    rootless: true
+    image: {}
+    args: []
+    env: []
+    resources: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    podAnnotations: {}
+    extraLabels: {}
+    extraVolumes: []
+    extraVolumeMounts: []
+    service:
+      enabled: true
+      type: ClusterIP
+      port: 1234
+      annotations: {}
+    storage:
+      type: emptyDir
+      mountPath: ""
+      pvc:
+        existingClaim: ""
+        storageClassName: ""
+        size: 50Gi
+        accessModes:
+          - ReadWriteOnce
+      hostPath:
+        path: /var/lib/buildkit
+        type: DirectoryOrCreate
+      emptyDir: {}
+    socketDir:
+      emptyDir: {}
+    config:
+      mountPath: /etc/buildkit/buildkitd.toml
+      inline: ""
+      existingConfigMap: ""
+      configMapKey: buildkitd.toml
+    secrets:
+      s3:
+        enabled: false
+        existingSecret: ""
+        mountAsEnv: true
+        secretKeys:
+          AWS_ACCESS_KEY_ID: AWS_ACCESS_KEY_ID
+          AWS_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_KEY
+          AWS_SESSION_TOKEN: AWS_SESSION_TOKEN
+      postgres:
+        enabled: false
+        existingSecret: ""
+        mountPath: /etc/buildkit/secrets/postgres
+        secretKeys:
+          dsn: dsn
+    tls:
+      server:
+        enabled: false
+        mountPath: /certs
+        ca: ""
+        cert: ""
+        key: ""
+        existingSecret: ""
+        secretKeys:
+          ca: ca.pem
+          cert: cert.pem
+          key: key.pem
+      client:
+        enabled: false
+        ca: ""
+        cert: ""
+        key: ""
+        existingSecret: ""
+        secretKeys:
+          ca: ca.pem
+          cert: cert.pem
+          key: key.pem
+    metrics: {}
+    livenessProbe:
+      exec:
+        command:
+          - buildctl
+          - debug
+          - workers
+      initialDelaySeconds: 5
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      exec:
+        command:
+          - buildctl
+          - debug
+          - workers
+      initialDelaySeconds: 5
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+      successThreshold: 1
