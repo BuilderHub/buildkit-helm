@@ -60,7 +60,7 @@ jobs:
       - name: Pre-pull chart images into kind
         run: |
           for image in \
-            moby/buildkit:v0.20.0-rootless \
+            moby/buildkit:v0.30.0-rootless \
             ghcr.io/builderhub/buildkit-metrics-agent:latest; do
             docker pull "$image"
             kind load docker-image --name chart-testing "$image"

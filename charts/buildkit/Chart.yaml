@@ -3,7 +3,7 @@ name: buildkit
 description: Helm chart for moby/buildkit and BuilderHub/buildkit-hive daemons on Kubernetes
 type: application
 version: 0.1.0
-appVersion: "0.20.0"
+appVersion: "0.30.0"
 kubeVersion: ">=1.24.0-0"
 home: https://github.com/BuilderHub/buildkit-helm
 sources:
